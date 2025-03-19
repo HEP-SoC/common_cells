@@ -178,4 +178,4 @@ set_tmrg_sources(${IP}
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
 
-tmrg(${IP} SED_WOR NO_COMMON_DEFINITIONS REPLACE)
+tmrg(${IP} NO_COMMON_DEFINITIONS REPLACE)
