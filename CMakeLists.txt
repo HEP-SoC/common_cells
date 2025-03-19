@@ -8,6 +8,24 @@ project(common_cells NONE)
 
 set(COMMON_CELLS_VERSION 0.0.3 CACHE INTERNAL "Version of the common_cells IP")
 
+set(SV_PKG_FILES
+    # Level 0
+    ${PROJECT_SOURCE_DIR}/src/cdc_reset_ctrlr_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/cb_filter_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/cf_math_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/ecc_pkg.sv
+    # Level 1
+    ${PROJECT_SOURCE_DIR}/src/addr_map_rule_pkg.sv
+)
+
+add_ip(common_cells
+    VENDOR pulp_platform
+    LIBRARY pkg
+    VERSION ${COMMON_CELLS_VERSION}
+)
+
+ip_sources(${IP} SYSTEMVERILOG ${SV_PKG_FILES})
+
 add_ip(common_cells
     VENDOR pulp_platform
     LIBRARY ip
@@ -25,14 +43,10 @@ set(SV_FILES
     # package. Files in level 1 only depend on files in level 0, files in level 2 on files in
     # levels 1 and 0, etc. Files within a level are ordered alphabetically.
     # Level 0
-    ${PROJECT_SOURCE_DIR}/src/cdc_reset_ctrlr_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/binary_to_gray.sv
-    # ${PROJECT_SOURCE_DIR}/src/cb_filter_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/cc_onehot.sv
-    # ${PROJECT_SOURCE_DIR}/src/cf_math_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/clk_int_div.sv
     ${PROJECT_SOURCE_DIR}/src/delta_counter.sv
-    # ${PROJECT_SOURCE_DIR}/src/ecc_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator_tx.sv
     # ${PROJECT_SOURCE_DIR}/src/exp_backoff.sv
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
@@ -68,7 +82,6 @@ set(SV_FILES
     # ${PROJECT_SOURCE_DIR}/src/unread.sv
     # ${PROJECT_SOURCE_DIR}/src/read.sv
     # Level 1
-    ${PROJECT_SOURCE_DIR}/src/addr_map_rule_pkg.sv
     ${PROJECT_SOURCE_DIR}/src/addr_decode_dync.sv
     # ${PROJECT_SOURCE_DIR}/src/cdc_2phase.sv
     ${PROJECT_SOURCE_DIR}/src/cdc_4phase.sv
@@ -133,6 +146,7 @@ set(SV_FILES
 )
 ip_sources(${IP} SYSTEMVERILOG ${SV_FILES})
 
+ip_link(${IP} pulp_platform::pkg::common_cells)
 # ip_link(${IP} pulp_platform::ip::tech_cells_generic)
 
 ######################################
