@@ -1,26 +1,26 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (c) 2023 CERN
+# Copyright (c) 2025 CERN
 #
 # Please retain this header in all redistributions and modifications of the code.
 
+include_guard(GLOBAL)
 cmake_minimum_required(VERSION 3.25)
-project(common_cells NONE)
+project(common_cells LANGUAGES NONE)
 
-set(COMMON_CELLS_VERSION 0.0.3 CACHE INTERNAL "Version of the common_cells IP")
+######################################################################
+# Set the IP version
+set(COMMON_CELLS_VERSION 0.0.7 CACHE INTERNAL "Version of the common_cells IP")
 
-# Fetch dependencies
-include("deps/deps.cmake")
-
-add_ip(common_cells
-    VENDOR pulp_platform
-    LIBRARY ip
-    VERSION ${COMMON_CELLS_VERSION}
-)
-
-# include/common_cells/registers.svh
-# include/common_cells/assertions.svh
-ip_include_directories(${IP} SYSTEMVERILOG
-    ${PROJECT_SOURCE_DIR}/include/common_cells
+######################################################################
+# List the IP files into one or more variables
+set(SV_PKG_FILES
+    # Level 0
+    ${PROJECT_SOURCE_DIR}/src/cdc_reset_ctrlr_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/cb_filter_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/cf_math_pkg.sv
+    # ${PROJECT_SOURCE_DIR}/src/ecc_pkg.sv
+    # Level 1
+    ${PROJECT_SOURCE_DIR}/src/addr_map_rule_pkg.sv
 )
 
 set(SV_FILES
@@ -28,14 +28,10 @@ set(SV_FILES
     # package. Files in level 1 only depend on files in level 0, files in level 2 on files in
     # levels 1 and 0, etc. Files within a level are ordered alphabetically.
     # Level 0
-    ${PROJECT_SOURCE_DIR}/src/cdc_reset_ctrlr_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/binary_to_gray.sv
-    # ${PROJECT_SOURCE_DIR}/src/cb_filter_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/cc_onehot.sv
-    # ${PROJECT_SOURCE_DIR}/src/cf_math_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/clk_int_div.sv
     ${PROJECT_SOURCE_DIR}/src/delta_counter.sv
-    # ${PROJECT_SOURCE_DIR}/src/ecc_pkg.sv
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator_tx.sv
     # ${PROJECT_SOURCE_DIR}/src/exp_backoff.sv
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
@@ -71,7 +67,6 @@ set(SV_FILES
     # ${PROJECT_SOURCE_DIR}/src/unread.sv
     # ${PROJECT_SOURCE_DIR}/src/read.sv
     # Level 1
-    ${PROJECT_SOURCE_DIR}/src/addr_map_rule_pkg.sv
     ${PROJECT_SOURCE_DIR}/src/addr_decode_dync.sv
     # ${PROJECT_SOURCE_DIR}/src/cdc_2phase.sv
     ${PROJECT_SOURCE_DIR}/src/cdc_4phase.sv
@@ -134,37 +129,55 @@ set(SV_FILES
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator.sv
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator_rx.sv
 )
+
+######################################################################
+# Define the common_cells pkg IP
+add_ip(common_cells
+    VENDOR pulp_platform
+    LIBRARY pkg
+    VERSION ${COMMON_CELLS_VERSION}
+)
+# Add the RTL sources to the IP
+ip_sources(${IP} SYSTEMVERILOG ${SV_PKG_FILES})
+
+######################################################################
+# Define the common_cells IP
+add_ip(common_cells
+    VENDOR pulp_platform
+    LIBRARY ip
+    VERSION ${COMMON_CELLS_VERSION}
+)
+# Add the RTL sources to the IP
 ip_sources(${IP} SYSTEMVERILOG ${SV_FILES})
+# Add the RTL header paths to include
+ip_include_directories(${IP} SYSTEMVERILOG
+    ${PROJECT_SOURCE_DIR}/include/common_cells
+)
+# Link the IP to its dependencies
+ip_link(${IP} pulp_platform::pkg::common_cells)
 
-# ip_link(${IP} pulp_platform::ip::tech_cells_generic)
-
-######################################
-#### Common Cells TMR ####
-######################################
-
-
+######################################################################
+# Define the common_cells TMR-IP
 add_ip(common_cells
     VENDOR pulp_platform
     LIBRARY ip_tmr
     VERSION ${COMMON_CELLS_VERSION}
 )
-
+# Add the RTL sources to the IP
 ip_sources(${IP} SYSTEMVERILOG
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
     ${PROJECT_SOURCE_DIR}/src/rr_arb_tree.sv
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
-
 # Link to non-TMR IP for cells than are not explicitly triplicated
 ip_link(${IP}
     pulp_platform::ip::common_cells
 )
-
-# Set the sources for triplication with TMRG
+# Set the files to be TMRG'ed
 set_tmrg_sources(${IP}
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
     ${PROJECT_SOURCE_DIR}/src/rr_arb_tree.sv
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
-
-tmrg(${IP} SED_WOR NO_COMMON_DEFINITIONS REPLACE)
+# Create the TMRG target
+tmrg(${IP} NO_COMMON_DEFINITIONS REPLACE)
