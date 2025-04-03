@@ -9,7 +9,7 @@ project(common_cells LANGUAGES NONE)
 
 ######################################################################
 # Set the IP version
-set(COMMON_CELLS_VERSION 0.0.3 CACHE INTERNAL "Version of the common_cells IP")
+set(COMMON_CELLS_VERSION 0.0.7 CACHE INTERNAL "Version of the common_cells IP")
 
 ######################################################################
 # List the IP files into one or more variables
