@@ -3,11 +3,16 @@
 #
 # Please retain this header in all redistributions and modifications of the code.
 
+include_guard(GLOBAL)
 cmake_minimum_required(VERSION 3.25)
-project(common_cells NONE)
+project(common_cells LANGUAGES NONE)
 
+######################################################################
+# Set the IP version
 set(COMMON_CELLS_VERSION 0.0.3 CACHE INTERNAL "Version of the common_cells IP")
 
+######################################################################
+# List the IP files into one or more variables
 set(SV_PKG_FILES
     # Level 0
     ${PROJECT_SOURCE_DIR}/src/cdc_reset_ctrlr_pkg.sv
@@ -16,26 +21,6 @@ set(SV_PKG_FILES
     # ${PROJECT_SOURCE_DIR}/src/ecc_pkg.sv
     # Level 1
     ${PROJECT_SOURCE_DIR}/src/addr_map_rule_pkg.sv
-)
-
-add_ip(common_cells
-    VENDOR pulp_platform
-    LIBRARY pkg
-    VERSION ${COMMON_CELLS_VERSION}
-)
-
-ip_sources(${IP} SYSTEMVERILOG ${SV_PKG_FILES})
-
-add_ip(common_cells
-    VENDOR pulp_platform
-    LIBRARY ip
-    VERSION ${COMMON_CELLS_VERSION}
-)
-
-# include/common_cells/registers.svh
-# include/common_cells/assertions.svh
-ip_include_directories(${IP} SYSTEMVERILOG
-    ${PROJECT_SOURCE_DIR}/include/common_cells
 )
 
 set(SV_FILES
@@ -144,38 +129,55 @@ set(SV_FILES
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator.sv
     # ${PROJECT_SOURCE_DIR}/src/edge_propagator_rx.sv
 )
+
+######################################################################
+# Define the common_cells pkg IP
+add_ip(common_cells
+    VENDOR pulp_platform
+    LIBRARY pkg
+    VERSION ${COMMON_CELLS_VERSION}
+)
+# Add the RTL sources to the IP
+ip_sources(${IP} SYSTEMVERILOG ${SV_PKG_FILES})
+
+######################################################################
+# Define the common_cells IP
+add_ip(common_cells
+    VENDOR pulp_platform
+    LIBRARY ip
+    VERSION ${COMMON_CELLS_VERSION}
+)
+# Add the RTL sources to the IP
 ip_sources(${IP} SYSTEMVERILOG ${SV_FILES})
-
+# Add the RTL header paths to include
+ip_include_directories(${IP} SYSTEMVERILOG
+    ${PROJECT_SOURCE_DIR}/include/common_cells
+)
+# Link the IP to its dependencies
 ip_link(${IP} pulp_platform::pkg::common_cells)
-# ip_link(${IP} pulp_platform::ip::tech_cells_generic)
 
-######################################
-#### Common Cells TMR ####
-######################################
-
-
+######################################################################
+# Define the common_cells TMR-IP
 add_ip(common_cells
     VENDOR pulp_platform
     LIBRARY ip_tmr
     VERSION ${COMMON_CELLS_VERSION}
 )
-
+# Add the RTL sources to the IP
 ip_sources(${IP} SYSTEMVERILOG
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
     ${PROJECT_SOURCE_DIR}/src/rr_arb_tree.sv
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
-
 # Link to non-TMR IP for cells than are not explicitly triplicated
 ip_link(${IP}
     pulp_platform::ip::common_cells
 )
-
-# Set the sources for triplication with TMRG
+# Set the files to be TMRG'ed
 set_tmrg_sources(${IP}
     ${PROJECT_SOURCE_DIR}/src/fifo_v3.sv
     ${PROJECT_SOURCE_DIR}/src/rr_arb_tree.sv
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
-
+# Create the TMRG target
 tmrg(${IP} NO_COMMON_DEFINITIONS REPLACE)
