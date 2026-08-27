@@ -169,6 +169,7 @@ ip_sources(${IP} SYSTEMVERILOG
     ${PROJECT_SOURCE_DIR}/src/rr_arb_tree.sv
     ${PROJECT_SOURCE_DIR}/src/sync.sv
 )
+ip_compile_definitions(${IP} SYSTEMVERILOG TMR=1)
 # Link to non-TMR IP for cells than are not explicitly triplicated
 ip_link(${IP}
     pulp_platform::ip::common_cells

@@ -145,13 +145,14 @@ module fifo_v3 #(
         end
     end
 
-// tmrg ignore start
+// tmrg copy start
 `ifndef SYNTHESIS
 `ifndef COMMON_CELLS_ASSERTS_OFF
     initial begin
         assert (DEPTH > 0)             else $error("DEPTH must be greater than 0.");
     end
 
+`ifndef TMR
     full_write : assert property(
         @(posedge clk_i) disable iff (~rst_ni) (full_o |-> ~push_i))
         else $fatal (1, "Trying to push new data although the FIFO is full.");
@@ -159,8 +160,29 @@ module fifo_v3 #(
     empty_read : assert property(
         @(posedge clk_i) disable iff (~rst_ni) (empty_o |-> ~pop_i))
         else $fatal (1, "Trying to pop data although the FIFO is empty.");
+`else
+    full_writeA : assert property(
+        @(posedge clk_iA) disable iff (~rst_niA) (full_oA |-> ~push_iA))
+        else $fatal (1, "Trying to push new data although the FIFO is full.");
+    full_writeB : assert property(
+        @(posedge clk_iB) disable iff (~rst_niB) (full_oB |-> ~push_iB))
+        else $fatal (1, "Trying to push new data although the FIFO is full.");
+    full_writeC : assert property(
+        @(posedge clk_iC) disable iff (~rst_niC) (full_oC |-> ~push_iC))
+        else $fatal (1, "Trying to push new data although the FIFO is full.");
+
+    empty_readA : assert property(
+        @(posedge clk_iA) disable iff (~rst_niA) (empty_oA |-> ~pop_iA))
+        else $fatal (1, "Trying to pop data although the FIFO is empty.");
+    empty_readB : assert property(
+        @(posedge clk_iB) disable iff (~rst_niB) (empty_oB |-> ~pop_iB))
+        else $fatal (1, "Trying to pop data although the FIFO is empty.");
+    empty_readC : assert property(
+        @(posedge clk_iC) disable iff (~rst_niC) (empty_oC |-> ~pop_iC))
+        else $fatal (1, "Trying to pop data although the FIFO is empty.");
 `endif
 `endif
-// tmrg ignore stop
+`endif
+// tmrg copy stop
 
 endmodule // fifo_v3

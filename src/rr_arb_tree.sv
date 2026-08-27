@@ -115,18 +115,24 @@ module rr_arb_tree #(
   typedef logic [IdxWidth-1:0] idx_t;
   typedef logic [DataWidth-1:0] DataType;
 
-  // tmrg ignore start
+  // tmrg copy start
   `ifndef SYNTHESIS
   `ifndef COMMON_CELLS_ASSERTS_OFF
   `ifndef VERILATOR
   `ifndef XSIM
+  `ifndef TMR
   // Default SVA reset
+  // Not applicable post-TMR: there is no single rst_ni/flush_i any more (only the
+  // per-domain rst_niA/B/C, flush_iA/B/C), and a "default disable iff" cannot be
+  // triplicated into three simultaneous module-wide defaults. This is harmless to
+  // drop, as every property below already states its own explicit "disable iff".
   default disable iff (!rst_ni || flush_i);
   `endif
   `endif
   `endif
   `endif
-  // tmrg ignore stop
+  `endif
+  // tmrg copy stop
 
   // pulled out FF signals so they are within scope of inserted TMR voters
   // assign them to unused if not needed within if/else scope
@@ -196,9 +202,10 @@ module rr_arb_tree #(
             end
           end
         end
-        // tmrg ignore start
+        // tmrg copy start
         `ifndef SYNTHESIS
         `ifndef COMMON_CELLS_ASSERTS_OFF
+        `ifndef TMR
           lock: assert property(
             @(posedge clk_i) disable iff (!rst_ni || flush_i)
                 LockIn |-> req_o && (!gnt_i && !flush_i) |=> idx_o == $past(idx_o)) else
@@ -212,9 +219,46 @@ module rr_arb_tree #(
                 LockIn |-> lock_d |=> req_tmp == req_q) else
                 $fatal (1, "It is disallowed to deassert unserved request signals when LockIn is \
                             enabled.");
+        `else
+          lockA: assert property(
+            @(posedge clk_iA) disable iff (!rst_niA || flush_iA)
+                LockIn |-> req_oA && (!gnt_iA && !flush_iA) |=> idx_oA == $past(idx_oA)) else
+                $fatal (1, "Lock implies same arbiter decision in next cycle if output is not \
+                            ready.");
+          lockB: assert property(
+            @(posedge clk_iB) disable iff (!rst_niB || flush_iB)
+                LockIn |-> req_oB && (!gnt_iB && !flush_iB) |=> idx_oB == $past(idx_oB)) else
+                $fatal (1, "Lock implies same arbiter decision in next cycle if output is not \
+                            ready.");
+          lockC: assert property(
+            @(posedge clk_iC) disable iff (!rst_niC || flush_iC)
+                LockIn |-> req_oC && (!gnt_iC && !flush_iC) |=> idx_oC == $past(idx_oC)) else
+                $fatal (1, "Lock implies same arbiter decision in next cycle if output is not \
+                            ready.");
+
+          logic [NumIn-1:0] req_tmpA, req_tmpB, req_tmpC;
+          assign req_tmpA = req_qA & req_iA;
+          assign req_tmpB = req_qB & req_iB;
+          assign req_tmpC = req_qC & req_iC;
+          lock_reqA: assume property(
+            @(posedge clk_iA) disable iff (!rst_niA || flush_iA)
+                LockIn |-> lock_dA |=> req_tmpA == req_qA) else
+                $fatal (1, "It is disallowed to deassert unserved request signals when LockIn is \
+                            enabled.");
+          lock_reqB: assume property(
+            @(posedge clk_iB) disable iff (!rst_niB || flush_iB)
+                LockIn |-> lock_dB |=> req_tmpB == req_qB) else
+                $fatal (1, "It is disallowed to deassert unserved request signals when LockIn is \
+                            enabled.");
+          lock_reqC: assume property(
+            @(posedge clk_iC) disable iff (!rst_niC || flush_iC)
+                LockIn |-> lock_dC |=> req_tmpC == req_qC) else
+                $fatal (1, "It is disallowed to deassert unserved request signals when LockIn is \
+                            enabled.");
         `endif
         `endif
-        // tmrg ignore stop
+        `endif
+        // tmrg copy stop
 
         always_ff @(posedge clk_i or negedge rst_ni) begin : p_req_regs
           if (!rst_ni) begin
@@ -341,7 +385,7 @@ module rr_arb_tree #(
     end
 
 
-    // tmrg ignore start
+    // tmrg copy start
     `ifndef SYNTHESIS
     `ifndef COMMON_CELLS_ASSERTS_OFF
     `ifndef XSIM
@@ -352,6 +396,7 @@ module rr_arb_tree #(
         else $fatal(1,"Cannot use LockIn feature together with external ExtPrio.");
     end
 
+    `ifndef TMR
     hot_one : assert property(
       @(posedge clk_i) disable iff (!rst_ni || flush_i) $onehot0(gnt_o))
         else $fatal (1, "Grant signal must be hot1 or zero.");
@@ -375,10 +420,71 @@ module rr_arb_tree #(
     req1 : assert property(
       @(posedge clk_i) disable iff (!rst_ni || flush_i) req_o |-> |req_i)
         else $fatal (1, "Req out implies req in.");
+    `else
+    hot_oneA : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) $onehot0(gnt_oA))
+        else $fatal (1, "Grant signal must be hot1 or zero.");
+    hot_oneB : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) $onehot0(gnt_oB))
+        else $fatal (1, "Grant signal must be hot1 or zero.");
+    hot_oneC : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) $onehot0(gnt_oC))
+        else $fatal (1, "Grant signal must be hot1 or zero.");
+
+    gnt0A : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) |gnt_oA |-> gnt_iA)
+        else $fatal (1, "Grant out implies grant in.");
+    gnt0B : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) |gnt_oB |-> gnt_iB)
+        else $fatal (1, "Grant out implies grant in.");
+    gnt0C : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) |gnt_oC |-> gnt_iC)
+        else $fatal (1, "Grant out implies grant in.");
+
+    gnt1A : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) req_oA |-> gnt_iA |-> |gnt_oA)
+        else $fatal (1, "Req out and grant in implies grant out.");
+    gnt1B : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) req_oB |-> gnt_iB |-> |gnt_oB)
+        else $fatal (1, "Req out and grant in implies grant out.");
+    gnt1C : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) req_oC |-> gnt_iC |-> |gnt_oC)
+        else $fatal (1, "Req out and grant in implies grant out.");
+
+    gnt_idxA : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) req_oA |->  gnt_iA |-> gnt_oA[idx_oA])
+        else $fatal (1, "Idx_o / gnt_o do not match.");
+    gnt_idxB : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) req_oB |->  gnt_iB |-> gnt_oB[idx_oB])
+        else $fatal (1, "Idx_o / gnt_o do not match.");
+    gnt_idxC : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) req_oC |->  gnt_iC |-> gnt_oC[idx_oC])
+        else $fatal (1, "Idx_o / gnt_o do not match.");
+
+    req0A : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) |req_iA |-> req_oA)
+        else $fatal (1, "Req in implies req out.");
+    req0B : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) |req_iB |-> req_oB)
+        else $fatal (1, "Req in implies req out.");
+    req0C : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) |req_iC |-> req_oC)
+        else $fatal (1, "Req in implies req out.");
+
+    req1A : assert property(
+      @(posedge clk_iA) disable iff (!rst_niA || flush_iA) req_oA |-> |req_iA)
+        else $fatal (1, "Req out implies req in.");
+    req1B : assert property(
+      @(posedge clk_iB) disable iff (!rst_niB || flush_iB) req_oB |-> |req_iB)
+        else $fatal (1, "Req out implies req in.");
+    req1C : assert property(
+      @(posedge clk_iC) disable iff (!rst_niC || flush_iC) req_oC |-> |req_iC)
+        else $fatal (1, "Req out implies req in.");
     `endif
     `endif
     `endif
-    // tmrg ignore stop
+    `endif
+    // tmrg copy stop
   end
 
 endmodule : rr_arb_tree
